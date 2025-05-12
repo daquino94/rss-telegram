@@ -1,3 +1,1 @@
-https://feeds.feedburner.com/Metalsucks
-https://metalstorm.net/rss/news.xml
-https://feeds.feedburner.com/Metalmusicarchives-com/NewReleases
+https://feeds.example.com/rss
