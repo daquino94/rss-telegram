@@ -1,0 +1,19 @@
+services:
+  rss-telegram-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rss-telegram-bot
+    restart: unless-stopped
+    environment:
+      - TELEGRAM_BOT_TOKEN=your_bot_token
+      - TELEGRAM_CHAT_ID=your_chat_id
+      - CHECK_INTERVAL=3600
+      - FEEDS_FILE=/app/data/feeds.txt
+    volumes:
+      - ./data:/app/data
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
