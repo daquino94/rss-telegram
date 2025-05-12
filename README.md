@@ -35,7 +35,7 @@ The bot:
 1. Clone this repository:
    ```bash
    git clone https://github.com/daquino94/rss-telegram.git
-   cd rss-telegram-bot
+   cd rss-telegram
    ```
 
 2. Install required dependencies:
@@ -65,7 +65,7 @@ The bot:
 1. Clone this repository:
    ```bash
    git clone https://github.com/daquino94/rss-telegram.git
-   cd rss-telegram-bot
+   cd rss-telegram
    ```
 
 2. Create a data directory and feeds file:
@@ -83,22 +83,22 @@ The bot:
 
    Or manually:
    ```bash
-   docker build -t rss-telegram-bot .
+   docker build -t rss-telegram .
    docker run -d \
-     --name rss-telegram-bot \
+     --name rss-telegram \
      -e TELEGRAM_BOT_TOKEN="your_bot_token" \
      -e TELEGRAM_CHAT_ID="your_chat_id" \
      -e CHECK_INTERVAL=3600 \
      -v $(pwd)/data:/app/data \
-     rss-telegram-bot
+     rss-telegram
    ```
 
 ### Option 3: Docker Hub Installation
 
 1. Create a directory for your data and configuration:
    ```bash
-   mkdir -p rss-telegram-bot/data
-   cd rss-telegram-bot
+   mkdir -p rss-telegram/data
+   cd rss-telegram
    echo "# Add your RSS feeds below, one per line" > data/feeds.txt
    ```
 
@@ -109,9 +109,9 @@ The bot:
    cat > docker-compose.yml << 'EOF'
    version: '3.8'
    services:
-     rss-telegram-bot:
-       image: yourusername/rss-telegram-bot:latest
-       container_name: rss-telegram-bot
+     rss-telegram:
+       image: yourusername/rss-telegram:latest
+       container_name: rss-telegram
        restart: unless-stopped
        environment:
          - TELEGRAM_BOT_TOKEN=your_bot_token_here
@@ -138,12 +138,12 @@ The bot:
    Or manually:
    ```bash
    docker run -d \
-     --name rss-telegram-bot \
+     --name rss-telegram \
      -e TELEGRAM_BOT_TOKEN="your_bot_token" \
      -e TELEGRAM_CHAT_ID="your_chat_id" \
      -e CHECK_INTERVAL=3600 \
      -v $(pwd)/data:/app/data \
-     yourusername/rss-telegram-bot:latest
+     yourusername/rss-telegram:latest
    ```
 
 ## Configuration
@@ -171,7 +171,7 @@ When using Docker, make sure to mount this directory as a volume to ensure data 
 When running with Docker, logs are stored using the json-file driver with rotation (max 3 files of 10MB each). You can view logs with:
 
 ```bash
-docker logs rss-telegram-bot
+docker logs rss-telegram
 ```
 
 ## License

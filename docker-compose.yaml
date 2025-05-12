@@ -1,9 +1,9 @@
 services:
-  rss-telegram-bot:
+  rss-telegram:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: rss-telegram-bot
+    container_name: rss-telegram
     restart: unless-stopped
     environment:
       - TELEGRAM_BOT_TOKEN=your_bot_token
