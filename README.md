@@ -1,6 +1,8 @@
 # RSS to Telegram Bot
 
 A Python bot that monitors RSS feeds and sends notifications to a Telegram chat when new content is published. The bot checks feeds at regular intervals, keeps track of which items have already been sent, and groups notifications by feed source for better readability.
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/balsamic9239)
+
 
 ## Features
 
@@ -104,29 +106,7 @@ The bot:
 
 2. Add your RSS feed URLs to `data/feeds.txt`.
 
-3. Create a docker-compose.yml file:
-   ```bash
-   cat > docker-compose.yml << 'EOF'
-   version: '3.8'
-   services:
-     rss-telegram:
-       image: yourusername/rss-telegram:latest
-       container_name: rss-telegram
-       restart: unless-stopped
-       environment:
-         - TELEGRAM_BOT_TOKEN=your_bot_token_here
-         - TELEGRAM_CHAT_ID=your_chat_id_here
-         - CHECK_INTERVAL=3600
-         - FEEDS_FILE=/app/data/feeds.txt
-       volumes:
-         - ./data:/app/data
-       logging:
-         driver: "json-file"
-         options:
-           max-size: "10m"
-           max-file: "3"
-   EOF
-   ```
+3. edit a docker-compose.yml with your bot token and your chat id or channel name (with @channelName)
 
 4. Update the environment variables in docker-compose.yml with your Telegram bot token and chat ID.
 
@@ -143,7 +123,7 @@ The bot:
      -e TELEGRAM_CHAT_ID="your_chat_id" \
      -e CHECK_INTERVAL=3600 \
      -v $(pwd)/data:/app/data \
-     yourusername/rss-telegram:latest
+      asterix94/rss-telegram:latest
    ```
 
 ## Configuration

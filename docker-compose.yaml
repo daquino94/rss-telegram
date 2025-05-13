@@ -1,13 +1,12 @@
+version: '3.8'
 services:
   rss-telegram:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image:  asterix94/rss-telegram:latest
     container_name: rss-telegram
     restart: unless-stopped
     environment:
-      - TELEGRAM_BOT_TOKEN=your_bot_token
-      - TELEGRAM_CHAT_ID=your_chat_id
+      - TELEGRAM_BOT_TOKEN=your_bot_token_here
+      - TELEGRAM_CHAT_ID=your_chat_id_here
       - CHECK_INTERVAL=3600
       - FEEDS_FILE=/app/data/feeds.txt
     volumes:
