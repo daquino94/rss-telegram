@@ -78,18 +78,15 @@ The bot:
 
 3. Add your RSS feed URLs to `data/feeds.txt`.
 
-4. Build and run the Docker container:
-   ```bash
-   docker-compose up -d
-   ```
-
-   Or manually:
+4. Run the Docker container:
    ```bash
    docker build -t rss-telegram .
    docker run -d \
      --name rss-telegram \
      -e TELEGRAM_BOT_TOKEN="your_bot_token" \
      -e TELEGRAM_CHAT_ID="your_chat_id" \
+     -e INCLUDE_DESCRIPTION="true" \
+     -e DISABLE_NOTIFICATION="false" \
      -e CHECK_INTERVAL=3600 \
      -v $(pwd)/data:/app/data \
      rss-telegram
@@ -121,6 +118,8 @@ The bot:
      --name rss-telegram \
      -e TELEGRAM_BOT_TOKEN="your_bot_token" \
      -e TELEGRAM_CHAT_ID="your_chat_id" \
+     -e INCLUDE_DESCRIPTION="true" \
+     -e DISABLE_NOTIFICATION="false" \
      -e CHECK_INTERVAL=3600 \
      -v $(pwd)/data:/app/data \
       asterix94/rss-telegram:latest
@@ -134,6 +133,8 @@ The bot can be configured using environment variables:
 |---------------------|-------------|---------|
 | `TELEGRAM_BOT_TOKEN` | Your Telegram bot token | Required |
 | `TELEGRAM_CHAT_ID` | Your Telegram chat or channel ID | Required |
+| `DISABLE_NOTIFICATION` | Disable telegram notification | false | 
+| `INCLUDE_DESCRIPTION` | Include description in the message | false | 
 | `CHECK_INTERVAL` | Time in seconds between feed checks | 3600 (1 hour) |
 | `FEEDS_FILE` | Path to the file containing RSS feed URLs | /app/data/feeds.txt |
 

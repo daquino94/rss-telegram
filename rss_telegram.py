@@ -22,6 +22,8 @@ TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
 CHECK_INTERVAL = int(os.environ.get('CHECK_INTERVAL', 3600))  # Default: 1 hour
 FEEDS_FILE = os.environ.get('FEEDS_FILE', '/app/data/feeds.txt')
+INCLUDE_DESCRIPTION = os.environ.get('INCLUDE_DESCRIPTION', 'false').lower() == 'true'  # Default: false
+DISABLE_NOTIFICATION = os.environ.get('DISABLE_NOTIFICATION', 'false').lower() == 'true'  # Default: false
 MAX_MESSAGE_LENGTH = 4096  # Maximum character limit for Telegram messages
 
 # File to store already sent articles
@@ -62,7 +64,8 @@ async def send_telegram_message(bot, chat_id, message):
         await bot.send_message(
             chat_id=chat_id,
             text=message,
-            parse_mode=ParseMode.MARKDOWN
+            parse_mode=ParseMode.MARKDOWN,
+            disable_notification=DISABLE_NOTIFICATION
         )
         return True
     except Exception as e:
@@ -85,7 +88,17 @@ async def send_grouped_messages(bot, messages_by_feed):
         entries_text = ""
         
         for entry in entries:
-            entry_text = f"• *{entry['title']}*\n  {entry['link']}\n\n"
+            entry_text = f"• *{entry['title']}*\n  {entry['link']}"
+            
+            # Add description if enabled and available
+            if INCLUDE_DESCRIPTION and entry.get('description'):
+                # Clean up the description - remove HTML tags and limit length if necessary
+                description = entry['description']
+                if len(description) > 150:
+                    description = description[:147] + "..."
+                entry_text += f"\n  _{description}_"
+                
+            entry_text += "\n\n"
             
             # If adding this entry exceeds the limit, send what we have first
             if len(header) + len(entries_text) + len(entry_text) > MAX_MESSAGE_LENGTH:
@@ -154,10 +167,19 @@ async def check_feeds(bot):
                     title = entry.title if hasattr(entry, 'title') else "No title"
                     link = entry.link if hasattr(entry, 'link') else ""
                     
+                    # Get description if needed
+                    description = ""
+                    if INCLUDE_DESCRIPTION:
+                        if hasattr(entry, 'description'):
+                            description = entry.description
+                        elif hasattr(entry, 'summary'):
+                            description = entry.summary
+                    
                     # Add the article to the list of those to notify
                     messages_by_feed[feed_title].append({
                         'title': title,
-                        'link': link
+                        'link': link,
+                        'description': description
                     })
                     
                     # Add the article to the list of those sent
@@ -174,6 +196,7 @@ async def check_feeds(bot):
 async def main_async():
     """Main asynchronous function."""
     logger.info("Starting RSS feed monitoring")
+    logger.info(f"Configuration: INCLUDE_DESCRIPTION={INCLUDE_DESCRIPTION}, DISABLE_NOTIFICATION={DISABLE_NOTIFICATION}")
     
     # Check if environment variables are set
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
