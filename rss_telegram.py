@@ -9,6 +9,8 @@ import requests
 import asyncio
 from telegram import Bot
 from telegram.constants import ParseMode
+import re
+import html
 
 # Logging configuration
 logging.basicConfig(
@@ -29,6 +31,16 @@ MAX_MESSAGE_LENGTH = 4096  # Maximum character limit for Telegram messages
 # File to store already sent articles
 HISTORY_FILE = "/app/data/sent_items.json"
 
+
+def strip_html(html_content: str) -> str:
+    """Convert HTML to plain text by removing tags and unescaping entities."""
+    # Remove HTML tags
+    text = re.sub(r'<[^>]+>', '', html_content)
+    # Unescape HTML entities and normalize whitespace
+    text = html.unescape(text)
+    return ' '.join(text.split())
+
+
 def load_feeds():
     """Load RSS feeds from configuration file."""
     try:
@@ -45,6 +57,7 @@ def load_feeds():
         logger.error(f"Error loading feeds: {e}")
         return []
 
+
 def load_sent_items():
     """Load history of already sent articles."""
     try:
@@ -52,6 +65,7 @@ def load_sent_items():
             return json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         return {}
+
 
 def save_sent_items(sent_items):
     """Save history of sent articles."""
@@ -78,152 +92,106 @@ async def send_grouped_messages(bot, messages_by_feed):
         logger.info("No new content to notify")
         return True
 
-    success = True
     for feed_title, entries in messages_by_feed.items():
         if not entries:
             continue
-            
-        # Create a single message for this feed
+
         header = f"📢 *New content from {feed_title}*\n\n"
         entries_text = ""
-        
+
         for entry in entries:
             entry_text = f"• *{entry['title']}*\n"
-            
-            # Add description if enabled and available
+
             if INCLUDE_DESCRIPTION and entry.get('description'):
-                # Clean up the description - remove HTML tags and limit length if necessary
-                description = entry['description']
-                if len(description) > 150:
-                    description = description[:147] + "..."
-                entry_text += f"  _{description}_\n"
-            
-            # Add empty line and link
+                desc = strip_html(entry['description'])
+                if len(desc) > 150:
+                    desc = desc[:147] + '...'
+                entry_text += f"  _{desc}_\n"
+
             entry_text += f"\n  {entry['link']}\n\n"
-            
-            # If adding this entry exceeds the limit, send what we have first
+
             if len(header) + len(entries_text) + len(entry_text) > MAX_MESSAGE_LENGTH:
-                message = header + entries_text
-                if not await send_telegram_message(bot, TELEGRAM_CHAT_ID, message):
-                    success = False
-                    
-                # Start a new message
+                await send_telegram_message(bot, TELEGRAM_CHAT_ID, header + entries_text)
                 entries_text = entry_text
             else:
                 entries_text += entry_text
-                
-        # Send the last group of entries
+
         if entries_text:
-            message = header + entries_text
-            if not await send_telegram_message(bot, TELEGRAM_CHAT_ID, message):
-                success = False
-                
-        # Short pause between messages from different feeds
+            await send_telegram_message(bot, TELEGRAM_CHAT_ID, header + entries_text)
+
         await asyncio.sleep(1)
-    
-    return success
+
+    return True
 
 async def check_feeds(bot):
     """Check RSS feeds for new articles."""
     sent_items = load_sent_items()
     feeds = load_feeds()
-    
+
     if not feeds:
         logger.warning("No feeds to check. Add feeds to the configuration file.")
         return sent_items
-    
-    messages_by_feed = {}  # Dictionary to group notifications by feed
-    
+
+    messages_by_feed = {}
+
     for feed_url in feeds:
         if not feed_url.strip():
             continue
-            
+
         logger.info(f"Checking feed: {feed_url}")
-        
+
         try:
             feed = feedparser.parse(feed_url)
-            
+
             if not feed.entries:
                 logger.warning(f"No entries found in feed: {feed_url}")
                 continue
-                
-            # Feed name (for message)
+
             feed_title = feed.feed.title if hasattr(feed.feed, 'title') else feed_url
-            
-            # Initialize array for this feed if it doesn't exist
-            if feed_url not in sent_items:
-                sent_items[feed_url] = []
-                
-            # Initialize array for messages from this feed
-            if feed_title not in messages_by_feed:
-                messages_by_feed[feed_title] = []
-            
-            # Check if there are new articles
+            sent_items.setdefault(feed_url, [])
+            messages_by_feed.setdefault(feed_title, [])
+
             for entry in feed.entries:
                 entry_id = entry.id if hasattr(entry, 'id') else entry.link
-                
-                # If the article hasn't been sent yet
-                if entry_id not in sent_items[feed_url]:
-                    # Prepare data for the message
-                    title = entry.title if hasattr(entry, 'title') else "No title"
-                    link = entry.link if hasattr(entry, 'link') else ""
-                    
-                    # Get description if needed
-                    description = ""
-                    if INCLUDE_DESCRIPTION:
-                        if hasattr(entry, 'description'):
-                            description = entry.description
-                        elif hasattr(entry, 'summary'):
-                            description = entry.summary
-                    
-                    # Add the article to the list of those to notify
-                    messages_by_feed[feed_title].append({
-                        'title': title,
-                        'link': link,
-                        'description': description
-                    })
-                    
-                    # Add the article to the list of those sent
-                    sent_items[feed_url].append(entry_id)
-            
+                if entry_id in sent_items[feed_url]:
+                    continue
+
+                title = entry.title if hasattr(entry, 'title') else "No title"
+                link = entry.link if hasattr(entry, 'link') else ""
+                description = ""
+                if INCLUDE_DESCRIPTION:
+                    description = getattr(entry, 'description', '') or getattr(entry, 'summary', '')
+
+                messages_by_feed[feed_title].append({'title': title, 'link': link, 'description': description})
+                sent_items[feed_url].append(entry_id)
         except Exception as e:
             logger.error(f"Error checking feed {feed_url}: {e}")
-    
-    # Send grouped notifications
+
     await send_grouped_messages(bot, messages_by_feed)
-    
     return sent_items
 
 async def main_async():
-    """Main asynchronous function."""
     logger.info("Starting RSS feed monitoring")
     logger.info(f"Configuration: INCLUDE_DESCRIPTION={INCLUDE_DESCRIPTION}, DISABLE_NOTIFICATION={DISABLE_NOTIFICATION}")
-    
-    # Check if environment variables are set
+
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         logger.error("Missing environment variables. Make sure to set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID")
         return
-    
-    # Initialize Telegram bot
+
     bot = Bot(token=TELEGRAM_BOT_TOKEN)
-    
-    # Send startup message
     await send_telegram_message(
-        bot,
-        TELEGRAM_CHAT_ID,
+        bot, TELEGRAM_CHAT_ID,
         "🤖 *RSS Monitoring Bot started!*\nActive feed monitoring. Configuration loaded from file."
     )
-    
-    # Main loop
+
     while True:
         sent_items = await check_feeds(bot)
         save_sent_items(sent_items)
-        
         logger.info(f"Next check in {CHECK_INTERVAL} seconds")
         await asyncio.sleep(CHECK_INTERVAL)
 
+
 def main():
-    """Main function that starts the asynchronous loop."""
     asyncio.run(main_async())
 
 if __name__ == "__main__":
