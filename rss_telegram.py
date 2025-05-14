@@ -88,7 +88,7 @@ async def send_grouped_messages(bot, messages_by_feed):
         entries_text = ""
         
         for entry in entries:
-            entry_text = f"• *{entry['title']}*\n  {entry['link']}"
+            entry_text = f"• *{entry['title']}*\n"
             
             # Add description if enabled and available
             if INCLUDE_DESCRIPTION and entry.get('description'):
@@ -96,9 +96,10 @@ async def send_grouped_messages(bot, messages_by_feed):
                 description = entry['description']
                 if len(description) > 150:
                     description = description[:147] + "..."
-                entry_text += f"\n  _{description}_"
-                
-            entry_text += "\n\n"
+                entry_text += f"  _{description}_\n"
+            
+            # Add empty line and link
+            entry_text += f"\n  {entry['link']}\n\n"
             
             # If adding this entry exceeds the limit, send what we have first
             if len(header) + len(entries_text) + len(entry_text) > MAX_MESSAGE_LENGTH:
